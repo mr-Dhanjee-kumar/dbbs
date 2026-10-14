@@ -3,7 +3,7 @@
  * Plugin Name:       Clean Code Projects
  * Plugin URI:        https://github.com/mr-Dhanjee-kumar/dbbs
  * Description:       Store HTML/CSS/JS projects in a custom post type and open each one on a 100% clean page — no theme, no wp_head, no WordPress CSS or JS. Includes a beautiful grid shortcode to list every project.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Author:            mr-Dhanjee-kumar
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -29,7 +29,7 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 		 * Constants
 		 * ------------------------------------------------------------------ */
 
-		const VERSION   = '1.0.0';
+		const VERSION   = '1.1.0';
 		const CPT       = 'ccp_project';
 		const META_LINK = '_ccp_link';
 		const META_CODE = '_ccp_code';
@@ -59,6 +59,7 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 
 			// Content type + storage.
 			add_action( 'init', array( $this, 'register_post_type' ) );
+			add_action( 'init', array( $this, 'maybe_flush_rules' ), 99 );
 			add_action( 'init', array( $this, 'register_shortcodes' ) );
 			add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
 			add_action( 'save_post_' . self::CPT, array( $this, 'save_meta' ), 10, 2 );
@@ -125,7 +126,7 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 				'hierarchical'        => false,
 				'supports'            => array( 'title', 'thumbnail', 'author', 'revisions' ),
 				'rewrite'             => array(
-					'slug'       => apply_filters( 'ccp_rewrite_slug', 'project' ),
+					'slug'       => apply_filters( 'ccp_rewrite_slug', 'p' ),
 					'with_front' => false,
 				),
 				'capability_type'     => 'post',
@@ -133,6 +134,19 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 			);
 
 			register_post_type( self::CPT, $args );
+		}
+
+		/**
+		 * Refresh permalinks when the stored version changes (e.g. after the
+		 * slug changed from /project/ to /p/), so old installs keep working.
+		 *
+		 * @return void
+		 */
+		public function maybe_flush_rules() {
+			if ( get_option( 'ccp_version' ) !== self::VERSION ) {
+				flush_rewrite_rules();
+				update_option( 'ccp_version', self::VERSION );
+			}
 		}
 
 		/**
@@ -211,17 +225,18 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 				<label for="ccp_link"><strong><?php esc_html_e( 'Project link (optional)', 'clean-code-projects' ); ?></strong></label>
 				<input type="url" id="ccp_link" name="ccp_link" class="widefat code" placeholder="https://example.com/demo"
 					value="<?php echo esc_attr( $link ); ?>" />
-				<span class="description"><?php esc_html_e( 'The live/original URL of the project. Shown on the grid card.', 'clean-code-projects' ); ?></span>
+				<span class="description"><?php esc_html_e( 'External / live URL of the project (another tool, a hosted demo, a site). Leave the code empty and this link is opened full screen in a borderless iframe on the clean page.', 'clean-code-projects' ); ?></span>
 			</p>
 
 			<p class="ccp-field">
 				<label for="ccp_mode"><strong><?php esc_html_e( 'Output mode', 'clean-code-projects' ); ?></strong></label>
 				<select id="ccp_mode" name="ccp_mode">
-					<option value="auto" <?php selected( $mode, 'auto' ); ?>><?php esc_html_e( 'Auto — detect a full HTML document', 'clean-code-projects' ); ?></option>
-					<option value="full" <?php selected( $mode, 'full' ); ?>><?php esc_html_e( 'Verbatim — print my code byte-for-byte (no doctype, head or body added)', 'clean-code-projects' ); ?></option>
-					<option value="fragment" <?php selected( $mode, 'fragment' ); ?>><?php esc_html_e( 'Skeleton — wrap my snippet in a bare doctype + charset + viewport', 'clean-code-projects' ); ?></option>
+					<option value="auto" <?php selected( $mode, 'auto' ); ?>><?php esc_html_e( 'Auto — code if pasted, otherwise the link in an iframe', 'clean-code-projects' ); ?></option>
+					<option value="link" <?php selected( $mode, 'link' ); ?>><?php esc_html_e( 'External link — full-screen, borderless iframe of the Project link', 'clean-code-projects' ); ?></option>
+					<option value="full" <?php selected( $mode, 'full' ); ?>><?php esc_html_e( 'Code verbatim — print my code byte-for-byte (no doctype, head or body added)', 'clean-code-projects' ); ?></option>
+					<option value="fragment" <?php selected( $mode, 'fragment' ); ?>><?php esc_html_e( 'Code skeleton — wrap my snippet in a bare doctype + charset + viewport', 'clean-code-projects' ); ?></option>
 				</select>
-				<span class="description"><?php esc_html_e( 'Either way the page contains ONLY your code: no theme, no wp_head, no body classes, no WordPress CSS or JS of any kind.', 'clean-code-projects' ); ?></span>
+				<span class="description"><?php esc_html_e( 'Every mode produces a page with ONLY what you asked for: no theme, no wp_head, no body classes, no WordPress CSS or JS of any kind.', 'clean-code-projects' ); ?></span>
 			</p>
 
 			<p class="ccp-field">
@@ -282,7 +297,7 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 
 			// Mode.
 			$mode = isset( $_POST['ccp_mode'] ) ? sanitize_key( wp_unslash( $_POST['ccp_mode'] ) ) : 'auto';
-			if ( ! in_array( $mode, array( 'auto', 'full', 'fragment' ), true ) ) {
+			if ( ! in_array( $mode, array( 'auto', 'full', 'fragment', 'link' ), true ) ) {
 				$mode = 'auto';
 			}
 			update_post_meta( $post_id, self::META_MODE, $mode );
@@ -383,14 +398,20 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 			}
 
 			if ( 'ccp_code' === $column ) {
-				if ( '' === trim( $code ) ) {
+				$mode = $this->resolve_mode( $post_id, $code );
+				$labels = array(
+					'link'     => __( 'external link (iframe)', 'clean-code-projects' ),
+					'full'     => __( 'full document', 'clean-code-projects' ),
+					'fragment' => __( 'snippet', 'clean-code-projects' ),
+				);
+				if ( '' === trim( $code ) && 'link' !== $mode ) {
 					echo '<span aria-hidden="true">—</span>';
 					return;
 				}
 				printf(
 					'<code>%1$s</code> <span class="description">(%2$s)</span>',
-					esc_html( number_format_i18n( strlen( $code ) ) . ' ' . __( 'chars', 'clean-code-projects' ) ),
-					esc_html( 'full' === $this->resolve_mode( $post_id, $code ) ? __( 'full document', 'clean-code-projects' ) : __( 'fragment', 'clean-code-projects' ) )
+					esc_html( '' === trim( $code ) ? __( 'link only', 'clean-code-projects' ) : number_format_i18n( strlen( $code ) ) . ' ' . __( 'chars', 'clean-code-projects' ) ),
+					esc_html( isset( $labels[ $mode ] ) ? $labels[ $mode ] : $mode )
 				);
 				return;
 			}
@@ -440,9 +461,17 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 		 */
 		private function resolve_mode( $post_id, $code ) {
 			$mode = get_post_meta( $post_id, self::META_MODE, true );
-			if ( 'full' === $mode || 'fragment' === $mode ) {
+			if ( in_array( $mode, array( 'full', 'fragment', 'link' ), true ) ) {
 				return $mode;
 			}
+
+			$link = trim( (string) get_post_meta( $post_id, self::META_LINK, true ) );
+
+			// Auto: no code but a link? Show the link full screen instead.
+			if ( '' === trim( $code ) && '' !== $link ) {
+				return 'link';
+			}
+
 			// Auto: treat anything that already looks like a document as one.
 			$haystack = strtolower( substr( $code, 0, 2048 ) );
 			if ( false !== strpos( $haystack, '<!doctype' ) || false !== strpos( $haystack, '<html' ) ) {
@@ -592,6 +621,11 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 				return $code;
 			}
 
+			// External link: a borderless iframe that fills the whole viewport.
+			if ( 'link' === $mode ) {
+				return $this->build_link_document( (string) get_post_meta( $post->ID, self::META_LINK, true ), $post );
+			}
+
 			$title = get_the_title( $post );
 			$lang  = get_bloginfo( 'language' );
 
@@ -604,6 +638,39 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 				. '</head>' . "\n"
 				. '<body>' . "\n"
 				. $code . "\n"
+				. '</body>' . "\n"
+				. '</html>';
+		}
+
+		/**
+		 * Minimal full-screen, borderless iframe wrapper for an external URL.
+		 *
+		 * @param string  $url  External URL.
+		 * @param WP_Post $post Project.
+		 * @return string
+		 */
+		private function build_link_document( $url, $post ) {
+
+			$title = get_the_title( $post );
+
+			if ( '' === trim( $url ) ) {
+				// No link after all: fall back to an empty skeleton.
+				return '<!DOCTYPE html>' . "\n<html lang=\"" . esc_attr( get_bloginfo( 'language' ) ) . '"><head><meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '"><title>' . esc_html( $title ) . '</title></head><body></body></html>';
+			}
+
+			$style = 'html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#fff}'
+				. 'iframe{display:block;width:100%;height:100%;border:0;margin:0;padding:0;background:#fff}';
+
+			return '<!DOCTYPE html>' . "\n"
+				. '<html lang="' . esc_attr( get_bloginfo( 'language' ) ) . '">' . "\n"
+				. '<head>' . "\n"
+				. '<meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '">' . "\n"
+				. '<meta name="viewport" content="width=device-width, initial-scale=1">' . "\n"
+				. '<title>' . esc_html( $title ) . '</title>' . "\n"
+				. '<style>' . $style . '</style>' . "\n"
+				. '</head>' . "\n"
+				. '<body>' . "\n"
+				. '<iframe src="' . esc_url( $url ) . '" title="' . esc_attr( $title ) . '" allowfullscreen loading="eager" referrerpolicy="no-referrer"></iframe>' . "\n"
 				. '</body>' . "\n"
 				. '</html>';
 		}
@@ -629,12 +696,11 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 		 */
 		private function get_options() {
 			$defaults = array(
-				'columns'     => 3,
-				'per_page'    => -1,
-				'show_code'    => 1,
-				'show_preview' => 1,
-				'new_tab'     => 1,
-				'search'      => 1,
+				'columns'      => 3,
+				'per_page'     => -1,
+				'show_preview' => 0,
+				'new_tab'      => 1,
+				'search'       => 1,
 			);
 			$saved    = (array) get_option( self::OPTION, array() );
 			return array_merge( $defaults, $saved );
@@ -648,65 +714,59 @@ if ( ! class_exists( 'CCP_Clean_Code_Projects' ) ) {
 		 */
 		private function grid_css() {
 			return <<<'CSS'
-.ccp-wrap{--ccp-bg:#f5f6f8;--ccp-card:#fff;--ccp-text:#14161a;--ccp-muted:#6b7280;--ccp-line:#e5e7eb;--ccp-accent:#4f46e5;--ccp-accent2:#0ea5e9;--ccp-radius:16px;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ccp-text);max-width:100%;margin:0 auto}
+.ccp-wrap{--ccp-card:#fff;--ccp-text:#14161a;--ccp-muted:#6b7280;--ccp-line:#e5e7eb;--ccp-accent:#4f46e5;--ccp-radius:14px;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ccp-text);max-width:100%;margin:0 auto}
 .ccp-wrap *{box-sizing:border-box}
-.ccp-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin:8px 0 22px}
-.ccp-title{margin:0;font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
-.ccp-count{margin:4px 0 0;color:var(--ccp-muted);font-size:.875rem}
-.ccp-search{flex:0 1 280px;min-width:200px}
-.ccp-search input{width:100%;padding:11px 14px;border:1px solid var(--ccp-line);border-radius:999px;font:inherit;font-size:.9rem;background:var(--ccp-card);color:inherit;transition:border-color .2s,box-shadow .2s}
+.ccp-head{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;margin:8px 0 20px}
+.ccp-title{margin:0;font-size:1.35rem;font-weight:700;letter-spacing:-.02em}
+.ccp-count{margin:4px 0 0;color:var(--ccp-muted);font-size:.85rem}
+.ccp-search{flex:0 1 260px;min-width:190px}
+.ccp-search input{width:100%;padding:10px 14px;border:1px solid var(--ccp-line);border-radius:999px;font:inherit;font-size:.875rem;background:var(--ccp-card);color:inherit;transition:border-color .2s,box-shadow .2s}
 .ccp-search input:focus{outline:none;border-color:var(--ccp-accent);box-shadow:0 0 0 4px rgba(79,70,229,.12)}
-.ccp-grid{display:grid;grid-template-columns:repeat(var(--ccp-cols,3),minmax(0,1fr));gap:22px}
+.ccp-grid{display:grid;grid-template-columns:repeat(var(--ccp-cols,3),minmax(0,1fr));gap:20px}
 @media (max-width:1024px){.ccp-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:600px){.ccp-grid{grid-template-columns:1fr}}
-.ccp-card{display:flex;flex-direction:column;background:var(--ccp-card);border:1px solid var(--ccp-line);border-radius:var(--ccp-radius);overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
-.ccp-card:hover{transform:translateY(-4px);box-shadow:0 16px 32px -12px rgba(16,24,40,.22);border-color:#d6d8de}
-.ccp-preview{position:relative;height:172px;overflow:hidden;background:#0f172a;border-bottom:1px solid var(--ccp-line)}
-.ccp-preview iframe{position:absolute;top:0;left:0;width:400%;height:400%;transform:scale(.25);transform-origin:top left;border:0;pointer-events:none;background:#fff}
-.ccp-preview--empty{display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:.85rem;background:linear-gradient(135deg,#f1f5f9,#e2e8f0)}
-.ccp-body{padding:16px 18px 4px;flex:1 1 auto}
-.ccp-card__title{margin:0 0 6px;font-size:1.06rem;font-weight:650;line-height:1.35;letter-spacing:-.01em;word-break:break-word}
-.ccp-card__title a{color:inherit;text-decoration:none}
-.ccp-card__title a:hover{color:var(--ccp-accent)}
-.ccp-meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:.8rem;color:var(--ccp-muted);margin:0 0 10px}
-.ccp-meta a{color:var(--ccp-muted);text-decoration:none;display:inline-flex;align-items:center;gap:5px}
-.ccp-meta a:hover{color:var(--ccp-accent);text-decoration:underline}
-.ccp-dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.5}
-.ccp-code{margin:12px 0 0;background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.74rem;line-height:1.55;max-height:132px;overflow:auto;white-space:pre;tab-size:2}
-.ccp-code::-webkit-scrollbar{width:8px;height:8px}
-.ccp-code::-webkit-scrollbar-thumb{background:#334155;border-radius:8px}
-.ccp-actions{display:flex;gap:10px;padding:16px 18px 18px;flex-wrap:wrap}
-.ccp-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 15px;border-radius:10px;font-size:.855rem;font-weight:600;text-decoration:none;border:1px solid var(--ccp-line);background:var(--ccp-card);color:var(--ccp-text);transition:background .2s,color .2s,border-color .2s,transform .15s}
+.ccp-card{background:var(--ccp-card);border:1px solid var(--ccp-line);border-radius:var(--ccp-radius);overflow:hidden;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.ccp-card:hover{transform:translateY(-3px);border-color:#cdd2da;box-shadow:0 14px 28px -14px rgba(16,24,40,.3)}
+.ccp-card__link{display:block;text-decoration:none;color:inherit}
+.ccp-card__link:focus-visible{outline:2px solid var(--ccp-accent);outline-offset:2px}
+.ccp-cover{position:relative;display:block;width:100%;aspect-ratio:16/10;background:#f3f5f8;border-bottom:1px solid var(--ccp-line);overflow:hidden}
+.ccp-cover img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .4s ease}
+.ccp-card:hover .ccp-cover img{transform:scale(1.04)}
+.ccp-cover iframe{position:absolute;top:0;left:0;width:400%;height:400%;transform:scale(.25);transform-origin:top left;border:0;pointer-events:none;background:#fff}
+.ccp-cover__ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;text-align:center;background:linear-gradient(135deg,var(--ccp-ph1,#eef2ff),var(--ccp-ph2,#f8fafc))}
+.ccp-cover__ph span{position:relative;font-size:.95rem;font-weight:650;line-height:1.4;color:var(--ccp-ph3,#64748b);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.ccp-card__title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:13px 15px;font-size:.93rem;font-weight:600;line-height:1.4;letter-spacing:-.01em;word-break:break-word}
+.ccp-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:9px;font-size:.82rem;font-weight:600;text-decoration:none;border:1px solid var(--ccp-line);background:var(--ccp-card);color:var(--ccp-text);transition:background .2s,border-color .2s}
 .ccp-btn:hover{background:#f3f4f6;border-color:#d6d8de}
-.ccp-btn:active{transform:translateY(1px)}
-.ccp-btn--primary{background:linear-gradient(135deg,var(--ccp-accent),var(--ccp-accent2));color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(79,70,229,.6)}
-.ccp-btn--primary:hover{filter:brightness(1.07);background:linear-gradient(135deg,var(--ccp-accent),var(--ccp-accent2));color:#fff}
-.ccp-empty{padding:54px 20px;text-align:center;border:1px dashed var(--ccp-line);border-radius:var(--ccp-radius);color:var(--ccp-muted)}
+.ccp-empty{padding:52px 20px;text-align:center;border:1px dashed var(--ccp-line);border-radius:var(--ccp-radius);color:var(--ccp-muted)}
 .ccp-empty h3{margin:0 0 6px;color:var(--ccp-text);font-size:1.05rem}
 .ccp-empty p{margin:0}
 .ccp-single{background:var(--ccp-card);border:1px solid var(--ccp-line);border-radius:var(--ccp-radius);overflow:hidden;margin:12px 0}
-.ccp-single__bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--ccp-line);background:#fafbfc}
-.ccp-single__bar strong{font-size:.95rem}
-.ccp-dot-row{display:flex;gap:6px}
-.ccp-dot-row i{width:10px;height:10px;border-radius:50%;background:#e5e7eb;display:block}
-.ccp-frame{width:100%;height:520px;border:0;display:block;background:#fff}
+.ccp-single__bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--ccp-line);background:#fafbfc}
+.ccp-single__bar strong{font-size:.92rem;font-weight:600}
+.ccp-frame{display:block;width:100%;height:520px;border:0;background:#fff}
 @media (max-width:600px){.ccp-frame{height:400px}}
 @media (prefers-color-scheme:dark){
-.ccp-wrap{--ccp-bg:#0b0f19;--ccp-card:#121826;--ccp-text:#e8eaee;--ccp-muted:#98a2b3;--ccp-line:#242c3d}
+.ccp-wrap{--ccp-card:#121826;--ccp-text:#e8eaee;--ccp-muted:#98a2b3;--ccp-line:#242c3d}
 .ccp-search input{background:var(--ccp-card);border-color:var(--ccp-line);color:inherit}
-.ccp-card:hover{border-color:#33415a;box-shadow:0 16px 32px -12px rgba(0,0,0,.7)}
+.ccp-card:hover{border-color:#33415a;box-shadow:0 14px 28px -14px rgba(0,0,0,.7)}
+.ccp-cover{background:#0f172a;border-bottom-color:var(--ccp-line)}
+.ccp-cover__ph::after{content:"";position:absolute;inset:0;background:rgba(11,15,25,.55)}
+.ccp-cover__ph span{color:#e6e9ee}
 .ccp-btn:hover{background:#1b2333;border-color:#33415a}
 .ccp-single__bar{background:#0f1522}
-.ccp-preview--empty{background:linear-gradient(135deg,#141c2b,#0f172a)}
 }
 CSS;
 		}
 
 		/**
-		 * Grid of all projects.
+		 * Grid of all projects — minimal bordered cards: cover image + title.
+		 *
+		 * Cover priority: featured image -> (optional live iframe) -> placeholder
+		 * block showing the project title.
 		 *
 		 * Usage: [ccp_projects columns="3" limit="12" orderby="date" order="DESC"
-		 *         show_code="1" preview="1" search="1" ids="1,2,3"]
+		 *         search="1" preview="0" new_tab="1" ids="1,2,3"]
 		 *
 		 * @param array|string $atts Shortcode attributes.
 		 * @return string
@@ -717,17 +777,16 @@ CSS;
 
 			$atts = shortcode_atts(
 				array(
-					'columns'    => $o['columns'],
-					'limit'      => $o['per_page'],
-					'per_page'   => $o['per_page'],
-					'orderby'    => 'date',
-					'order'      => 'DESC',
-					'ids'        => '',
-					'search'     => $o['search'],
-					'show_code'  => $o['show_code'],
-					'preview'    => $o['show_preview'],
-					'new_tab'    => $o['new_tab'],
-					'title'      => '',
+					'columns'  => $o['columns'],
+					'limit'    => $o['per_page'],
+					'per_page' => $o['per_page'],
+					'orderby'  => 'date',
+					'order'    => 'DESC',
+					'ids'      => '',
+					'search'   => $o['search'],
+					'preview'  => $o['show_preview'],
+					'new_tab'  => $o['new_tab'],
+					'title'    => '',
 				),
 				$atts,
 				'ccp_projects'
@@ -746,9 +805,9 @@ CSS;
 			);
 
 			if ( ! empty( $atts['ids'] ) ) {
-				$query_args['post__in']            = array_filter( array_map( 'intval', explode( ',', $atts['ids'] ) ) );
-				$query_args['orderby']             = 'post__in';
-				$query_args['posts_per_page']      = count( $query_args['post__in'] );
+				$query_args['post__in']       = array_filter( array_map( 'intval', explode( ',', $atts['ids'] ) ) );
+				$query_args['orderby']        = 'post__in';
+				$query_args['posts_per_page'] = count( $query_args['post__in'] );
 			}
 
 			$projects = new WP_Query( $query_args );
@@ -783,46 +842,23 @@ CSS;
 				$projects->the_post();
 
 				$post_id = get_the_ID();
-				$code    = (string) get_post_meta( $post_id, self::META_CODE, true );
-				$link    = get_post_meta( $post_id, self::META_LINK, true );
 				$clean   = get_permalink( $post_id );
-				$host    = $link ? wp_parse_url( $link, PHP_URL_HOST ) : '';
+				$title   = get_the_title();
+				$thumb   = has_post_thumbnail( $post_id ) ? (int) get_post_thumbnail_id( $post_id ) : 0;
 
-				$html .= '<article class="ccp-card" data-ccp-name="' . esc_attr( strtolower( get_the_title() ) ) . '">';
+				$html .= '<article class="ccp-card" data-ccp-name="' . esc_attr( strtolower( $title ) ) . '">';
+				$html .= '<a class="ccp-card__link" href="' . esc_url( $clean ) . '"' . $target . '>';
 
-				/* Preview */
-				if ( $atts['preview'] ) {
-					$html .= '<div class="ccp-preview"><iframe src="' . esc_url( $clean ) . '" title="' . esc_attr( get_the_title() ) . '" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe></div>';
-				} elseif ( $atts['show_code'] && '' !== trim( $code ) ) {
-					$html .= '<div class="ccp-preview ccp-preview--code"><pre class="ccp-code" style="height:172px;max-height:172px;margin:0;border-radius:0">' . esc_html( $this->excerpt_code( $code, 900 ) ) . '</pre></div>';
+				if ( $thumb ) {
+					$html .= '<span class="ccp-cover"><img src="' . esc_url( wp_get_attachment_image_url( $thumb, 'medium_large' ) ) . '" alt="' . esc_attr( $title ) . '" loading="lazy" decoding="async"></span>';
+				} elseif ( $atts['preview'] ) {
+					$html .= '<span class="ccp-cover"><iframe src="' . esc_url( $clean ) . '" title="' . esc_attr( $title ) . '" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe></span>';
 				} else {
-					$html .= '<div class="ccp-preview ccp-preview--empty">' . esc_html__( 'No preview', 'clean-code-projects' ) . '</div>';
+					$html .= '<span class="ccp-cover" style="' . esc_attr( $this->placeholder_style( $title ) ) . '"><span class="ccp-cover__ph"><span>' . esc_html( $title ) . '</span></span></span>';
 				}
 
-				/* Body */
-				$html .= '<div class="ccp-body">';
-				$html .= '<h3 class="ccp-card__title"><a href="' . esc_url( $clean ) . '"' . $target . '>' . esc_html( get_the_title() ) . '</a></h3>';
-				$html .= '<p class="ccp-meta">';
-				$html .= '<span>' . esc_html( get_the_date() ) . '</span>';
-				if ( $link ) {
-					$html .= '<span class="ccp-dot"></span><a href="' . esc_url( $link ) . '"' . $target . '>' . esc_html( $host ) . ' ↗</a>';
-				}
-				$html .= '<span class="ccp-dot"></span><span>' . esc_html( number_format_i18n( strlen( $code ) ) . ' ' . __( 'chars', 'clean-code-projects' ) ) . '</span>';
-				$html .= '</p>';
-
-				if ( $atts['show_code'] && $atts['preview'] && '' !== trim( $code ) ) {
-					$html .= '<pre class="ccp-code">' . esc_html( $this->excerpt_code( $code, 400 ) ) . '</pre>';
-				}
-				$html .= '</div>';
-
-				/* Actions */
-				$html .= '<div class="ccp-actions">';
-				$html .= '<a class="ccp-btn ccp-btn--primary" href="' . esc_url( $clean ) . '"' . $target . '>' . esc_html__( 'Open clean page', 'clean-code-projects' ) . ' ↗</a>';
-				if ( $link ) {
-					$html .= '<a class="ccp-btn" href="' . esc_url( $link ) . '"' . $target . '>' . esc_html__( 'Live link', 'clean-code-projects' ) . '</a>';
-				}
-				$html .= '</div>';
-
+				$html .= '<span class="ccp-card__title">' . esc_html( $title ) . '</span>';
+				$html .= '</a>';
 				$html .= '</article>';
 			}
 
@@ -837,6 +873,21 @@ CSS;
 			wp_reset_postdata();
 
 			return $html;
+		}
+
+		/**
+		 * Deterministic pastel gradient for the "no featured image" placeholder.
+		 *
+		 * @param string $seed Project title (keeps the colour stable per project).
+		 * @return string Inline custom-property declarations.
+		 */
+		private function placeholder_style( $seed ) {
+			$hue = hexdec( substr( md5( $seed ), 0, 4 ) ) % 360;
+			return sprintf(
+				'--ccp-ph1:hsl(%1$d 68%% 96%%);--ccp-ph2:hsl(%2$d 60%% 90%%)',
+				$hue,
+				( $hue + 26 ) % 360
+			);
 		}
 
 		/**
@@ -877,26 +928,10 @@ CSS;
 			return '<div class="ccp-wrap ccp-single">'
 				. '<style>' . $this->grid_css() . '</style>'
 				. '<div class="ccp-single__bar"><strong>' . esc_html( $heading ) . '</strong>'
-				. '<span class="ccp-dot-row"><i></i><i></i><i></i></span>'
 				. '<a class="ccp-btn" href="' . esc_url( get_permalink( $post ) ) . '" target="_blank" rel="noopener">' . esc_html__( 'Open full page ↗', 'clean-code-projects' ) . '</a>'
 				. '</div>'
-				. '<iframe class="ccp-frame" src="' . esc_url( get_permalink( $post ) ) . '" style="height:' . (int) $atts['height'] . 'px" loading="lazy" sandbox="allow-scripts allow-same-origin" title="' . esc_attr( $heading ) . '"></iframe>'
+				. '<iframe class="ccp-frame" src="' . esc_url( get_permalink( $post ) ) . '" style="height:' . ( (int) $atts['height'] ) . 'px" loading="lazy" frameborder="0" scrolling="auto" sandbox="allow-scripts allow-same-origin" title="' . esc_attr( $heading ) . '"></iframe>'
 				. '</div>';
-		}
-
-		/**
-		 * Trim code down for the tiny card preview.
-		 *
-		 * @param string $code Code.
-		 * @param int    $len  Max characters.
-		 * @return string
-		 */
-		private function excerpt_code( $code, $len = 400 ) {
-			$code = trim( $code );
-			if ( strlen( $code ) > $len ) {
-				$code = substr( $code, 0, $len ) . "\n…";
-			}
-			return $code;
 		}
 
 		/**
@@ -949,8 +984,7 @@ CSS;
 
 			add_settings_field( 'columns', __( 'Columns', 'clean-code-projects' ), array( $this, 'field_number' ), 'ccp-settings', 'ccp_main', array( 'key' => 'columns', 'min' => 1, 'max' => 6 ) );
 			add_settings_field( 'per_page', __( 'Projects per page (-1 = all)', 'clean-code-projects' ), array( $this, 'field_number' ), 'ccp-settings', 'ccp_main', array( 'key' => 'per_page', 'min' => -1, 'max' => 200 ) );
-			add_settings_field( 'show_preview', __( 'Live preview in card', 'clean-code-projects' ), array( $this, 'field_checkbox' ), 'ccp-settings', 'ccp_main', array( 'key' => 'show_preview' ) );
-			add_settings_field( 'show_code', __( 'Show code snippet', 'clean-code-projects' ), array( $this, 'field_checkbox' ), 'ccp-settings', 'ccp_main', array( 'key' => 'show_code' ) );
+			add_settings_field( 'show_preview', __( 'Live iframe cover (only when no featured image)', 'clean-code-projects' ), array( $this, 'field_checkbox' ), 'ccp-settings', 'ccp_main', array( 'key' => 'show_preview' ) );
 			add_settings_field( 'search', __( 'Show search box', 'clean-code-projects' ), array( $this, 'field_checkbox' ), 'ccp-settings', 'ccp_main', array( 'key' => 'search' ) );
 			add_settings_field( 'new_tab', __( 'Open links in new tab', 'clean-code-projects' ), array( $this, 'field_checkbox' ), 'ccp-settings', 'ccp_main', array( 'key' => 'new_tab' ) );
 		}
@@ -966,7 +1000,6 @@ CSS;
 			$out['columns']      = isset( $input['columns'] ) ? max( 1, min( 6, (int) $input['columns'] ) ) : 3;
 			$out['per_page']     = isset( $input['per_page'] ) ? max( -1, min( 200, (int) $input['per_page'] ) ) : -1;
 			$out['show_preview'] = empty( $input['show_preview'] ) ? 0 : 1;
-			$out['show_code']    = empty( $input['show_code'] ) ? 0 : 1;
 			$out['search']       = empty( $input['search'] ) ? 0 : 1;
 			$out['new_tab']      = empty( $input['new_tab'] ) ? 0 : 1;
 			return $out;
@@ -1039,7 +1072,7 @@ CSS;
 						</tr>
 						<tr>
 							<th style="text-align:left"><?php esc_html_e( 'Customised grid', 'clean-code-projects' ); ?></th>
-							<td><code>[ccp_projects columns="4" limit="12" orderby="title" order="ASC" search="1" preview="1" show_code="1"]</code></td>
+							<td><code>[ccp_projects columns="4" limit="12" orderby="title" order="ASC" search="1" preview="1"]</code></td>
 						</tr>
 						<tr>
 							<th style="text-align:left"><?php esc_html_e( 'Pick specific projects', 'clean-code-projects' ); ?></th>
