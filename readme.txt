@@ -4,7 +4,7 @@ Tags: custom post type, clean page, blank page, html, css, js, code snippet, por
 Requires at least: 5.9
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -43,6 +43,9 @@ The plugin hooks `template_redirect` at priority **0** — i.e. before WordPress
 * Settings page for grid defaults (columns, per page, preview, code, search, new tab)
 * "Open clean page" button + shortcode shown right in the projects list table
 * Auto-created **Projects** page on activation
+* **🛡️ Super Admin page** (Clean Projects → Super Admin) — stats plus manage/delete *everything*: bulk trash, restore, delete forever, regenerate files, delete files only, orphan cleanup, and a danger zone to delete all projects + files. Multisite: network Super Admins only; single site: Administrators
+* **Real HTML files in uploads** — every saved project is mirrored to `wp-content/uploads/clean-code-projects/<slug>-<id>.html` (the exact clean document), auto-removed when the project is permanently deleted, backfilled on activation
+* **Premium glass grid** — centered max-width grid, frosted-glass cards (`backdrop-filter` blur/saturate), gradient heading + buttons, colourful preview header, auto dark mode, reduced-motion support
 * Only **three files** total — drop `clean-code-projects.php` in and go
 * Auto dark mode, keyboard accessible, fully responsive
 
@@ -116,10 +119,18 @@ The code is stored and printed raw on purpose — that is the whole point of the
 
 == Changelog ==
 
+= 1.1.0 =
+* New: Super Admin control centre to manage and delete all projects and files (Super Admins on multisite, Administrators on single site), all actions nonce + capability checked with confirm prompts.
+* New: projects are stored as real `.html` files in `wp-content/uploads/clean-code-projects/` on save, regenerated/deleted from the Super Admin page, and removed on permanent delete.
+* New: premium centered glass UI for the `[ccp_projects]` grid and single embed — frosted cards, gradient accents, auto dark mode.
+
 = 1.0.0 =
 * First release: Projects custom post type, 100% clean single pages, responsive card grid shortcode, single-project embed shortcode, settings page and auto-created Projects page.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Super Admin page, HTML files stored in uploads, premium glass grid.
 
 = 1.0.0 =
 Initial release.
