@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clean Code Projects — grid preview</title>
+<style>
+body{margin:0;background:#f5f6f8;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.page{max-width:1180px;margin:0 auto;padding:40px 24px 60px}
+.note{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #4f46e5;border-radius:12px;padding:14px 18px;margin-bottom:28px;font-size:14px;color:#374151}
+.note code{background:#f3f4f6;padding:2px 6px;border-radius:5px}
+</style>
+<style>
+.ccp-wrap{--ccp-bg:#f5f6f8;--ccp-card:#fff;--ccp-text:#14161a;--ccp-muted:#6b7280;--ccp-line:#e5e7eb;--ccp-accent:#4f46e5;--ccp-accent2:#0ea5e9;--ccp-radius:16px;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ccp-text);max-width:100%;margin:0 auto}
+.ccp-wrap *{box-sizing:border-box}
+.ccp-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin:8px 0 22px}
+.ccp-title{margin:0;font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
+.ccp-count{margin:4px 0 0;color:var(--ccp-muted);font-size:.875rem}
+.ccp-search{flex:0 1 280px;min-width:200px}
+.ccp-search input{width:100%;padding:11px 14px;border:1px solid var(--ccp-line);border-radius:999px;font:inherit;font-size:.9rem;background:var(--ccp-card);color:inherit;transition:border-color .2s,box-shadow .2s}
+.ccp-search input:focus{outline:none;border-color:var(--ccp-accent);box-shadow:0 0 0 4px rgba(79,70,229,.12)}
+.ccp-grid{display:grid;grid-template-columns:repeat(var(--ccp-cols,3),minmax(0,1fr));gap:22px}
+@media (max-width:1024px){.ccp-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.ccp-grid{grid-template-columns:1fr}}
+.ccp-card{display:flex;flex-direction:column;background:var(--ccp-card);border:1px solid var(--ccp-line);border-radius:var(--ccp-radius);overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.ccp-card:hover{transform:translateY(-4px);box-shadow:0 16px 32px -12px rgba(16,24,40,.22);border-color:#d6d8de}
+.ccp-preview{position:relative;height:172px;overflow:hidden;background:#0f172a;border-bottom:1px solid var(--ccp-line)}
+.ccp-preview iframe{position:absolute;top:0;left:0;width:400%;height:400%;transform:scale(.25);transform-origin:top left;border:0;pointer-events:none;background:#fff}
+.ccp-preview--empty{display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:.85rem;background:linear-gradient(135deg,#f1f5f9,#e2e8f0)}
+.ccp-body{padding:16px 18px 4px;flex:1 1 auto}
+.ccp-card__title{margin:0 0 6px;font-size:1.06rem;font-weight:650;line-height:1.35;letter-spacing:-.01em;word-break:break-word}
+.ccp-card__title a{color:inherit;text-decoration:none}
+.ccp-card__title a:hover{color:var(--ccp-accent)}
+.ccp-meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:.8rem;color:var(--ccp-muted);margin:0 0 10px}
+.ccp-meta a{color:var(--ccp-muted);text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.ccp-meta a:hover{color:var(--ccp-accent);text-decoration:underline}
+.ccp-dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.5}
+.ccp-code{margin:12px 0 0;background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.74rem;line-height:1.55;max-height:132px;overflow:auto;white-space:pre;tab-size:2}
+.ccp-code::-webkit-scrollbar{width:8px;height:8px}
+.ccp-code::-webkit-scrollbar-thumb{background:#334155;border-radius:8px}
+.ccp-actions{display:flex;gap:10px;padding:16px 18px 18px;flex-wrap:wrap}
+.ccp-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 15px;border-radius:10px;font-size:.855rem;font-weight:600;text-decoration:none;border:1px solid var(--ccp-line);background:var(--ccp-card);color:var(--ccp-text);transition:background .2s,color .2s,border-color .2s,transform .15s}
+.ccp-btn:hover{background:#f3f4f6;border-color:#d6d8de}
+.ccp-btn:active{transform:translateY(1px)}
+.ccp-btn--primary{background:linear-gradient(135deg,var(--ccp-accent),var(--ccp-accent2));color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(79,70,229,.6)}
+.ccp-btn--primary:hover{filter:brightness(1.07);background:linear-gradient(135deg,var(--ccp-accent),var(--ccp-accent2));color:#fff}
+.ccp-empty{padding:54px 20px;text-align:center;border:1px dashed var(--ccp-line);border-radius:var(--ccp-radius);color:var(--ccp-muted)}
+.ccp-empty h3{margin:0 0 6px;color:var(--ccp-text);font-size:1.05rem}
+.ccp-empty p{margin:0}
+.ccp-single{background:var(--ccp-card);border:1px solid var(--ccp-line);border-radius:var(--ccp-radius);overflow:hidden;margin:12px 0}
+.ccp-single__bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--ccp-line);background:#fafbfc}
+.ccp-single__bar strong{font-size:.95rem}
+.ccp-dot-row{display:flex;gap:6px}
+.ccp-dot-row i{width:10px;height:10px;border-radius:50%;background:#e5e7eb;display:block}
+.ccp-frame{width:100%;height:520px;border:0;display:block;background:#fff}
+@media (max-width:600px){.ccp-frame{height:400px}}
+@media (prefers-color-scheme:dark){
+.ccp-wrap{--ccp-bg:#0b0f19;--ccp-card:#121826;--ccp-text:#e8eaee;--ccp-muted:#98a2b3;--ccp-line:#242c3d}
+.ccp-search input{background:var(--ccp-card);border-color:var(--ccp-line);color:inherit}
+.ccp-card:hover{border-color:#33415a;box-shadow:0 16px 32px -12px rgba(0,0,0,.7)}
+.ccp-btn:hover{background:#1b2333;border-color:#33415a}
+.ccp-single__bar{background:#0f1522}
+.ccp-preview--empty{background:linear-gradient(135deg,#141c2b,#0f172a)}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="note">
+    <strong>Static preview</strong> of the <code>[ccp_projects]</code> grid shipped by
+    <code>clean-code-projects.php</code>. This file is only a mock-up — the cards below are
+    rendered with the exact same CSS the plugin outputs, and each thumbnail is an iframe of a
+    project page with zero WordPress CSS/JS.
+  </div>
+
+  <div class="ccp-wrap" style="--ccp-cols:3">
+    <div class="ccp-head">
+      <div><h2 class="ccp-title"></h2><p class="ccp-count">6 projects</p></div>
+      <div class="ccp-search"><input type="search" class="ccp-filter" placeholder="Search projects…" aria-label="Search projects"></div>
+    </div>
+    <div class="ccp-grid">
+      <article class="ccp-card" data-ccp-name="nexora store hero">
+        <div class="ccp-preview"><iframe srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;title&gt;Nexora&lt;/title&gt;
+&lt;style&gt;
+body{margin:0;font-family:system-ui;background:#0b1120;color:#fff;display:grid;place-items:center;height:100vh}
+h1{font-size:44px;margin:0 0 10px;background:linear-gradient(90deg,#60a5fa,#f472b6);-webkit-background-clip:text;color:transparent}
+p{margin:0 0 22px;color:#94a3b8}
+a{background:#fff;color:#0b1120;padding:12px 22px;border-radius:99px;font-weight:700;text-decoration:none}
+&lt;/style&gt;&lt;/head&gt;
+&lt;body&gt;&lt;div style=&quot;text-align:center&quot;&gt;&lt;h1&gt;Nexora Store&lt;/h1&gt;&lt;p&gt;Everything you need, delivered today.&lt;/p&gt;&lt;a href=&quot;#&quot;&gt;Shop now&lt;/a&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;" title="Nexora Store Hero" loading="lazy" sandbox="allow-scripts"></iframe></div>
+        <div class="ccp-body">
+          <h3 class="ccp-card__title"><a href="#" onclick="return false">Nexora Store Hero</a></h3>
+          <p class="ccp-meta"><span>Oct 11, 2026</span><span class="ccp-dot"></span><a href="#" onclick="return false">dktechnozone.com ↗</a><span class="ccp-dot"></span><span>636 chars</span></p>
+          <pre class="ccp-code">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;title&gt;Nexora&lt;/title&gt;
+&lt;style&gt;
+body{margin:0;font-family:system-ui;background:#0b1120;color:#fff;display:grid;place-items:center;height:100vh}
+h1{font-size:44px;margin:0 0 10px;background:linear-gradient(90deg,#60a5fa,#f472b6);-webkit-background-clip:text;color:transparent}
+p{margin:0 0 22px;color:#94a3b8}
+a{background:#fff;color:#0b1120;p
+…</pre>
+        </div>
+        <div class="ccp-actions">
+          <a class="ccp-btn ccp-btn--primary" href="#" onclick="return false">Open clean page ↗</a>
+          <a class="ccp-btn" href="#" onclick="return false">Live link</a>
+        </div>
+      </article>
+      <article class="ccp-card" data-ccp-name="pulse news card">
+        <div class="ccp-preview"><iframe srcdoc="&lt;style&gt;
+body{margin:0;font-family:system-ui;background:#f1f5f9;display:grid;place-items:center;height:100vh}
+.card{background:#fff;width:300px;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.thumb{height:120px;background:linear-gradient(135deg,#f97316,#ef4444)}
+.c{padding:16px}.tag{font-size:11px;color:#ef4444;font-weight:700;letter-spacing:.1em}
+h3{margin:8px 0 6px;font-size:17px}p{margin:0;color:#64748b;font-size:13px}
+&lt;/style&gt;
+&lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;thumb&quot;&gt;&lt;/div&gt;&lt;div class=&quot;c&quot;&gt;&lt;div class=&quot;tag&quot;&gt;TECHNOLOGY&lt;/div&gt;
+&lt;h3&gt;The future of local commerce&lt;/h3&gt;&lt;p&gt;How kirana stores are going digital in 2026.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;" title="Pulse News Card" loading="lazy" sandbox="allow-scripts"></iframe></div>
+        <div class="ccp-body">
+          <h3 class="ccp-card__title"><a href="#" onclick="return false">Pulse News Card</a></h3>
+          <p class="ccp-meta"><span>Oct 12, 2026</span><span class="ccp-dot"></span><a href="#" onclick="return false">dktechnozone.com ↗</a><span class="ccp-dot"></span><span>654 chars</span></p>
+          <pre class="ccp-code">&lt;style&gt;
+body{margin:0;font-family:system-ui;background:#f1f5f9;display:grid;place-items:center;height:100vh}
+.card{background:#fff;width:300px;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.thumb{height:120px;background:linear-gradient(135deg,#f97316,#ef4444)}
+.c{padding:16px}.tag{font-size:11px;color:#ef4444;font-weight:700;letter-spacing:.1em}
+h3{margin:8px 0 6px;fon
+…</pre>
+        </div>
+        <div class="ccp-actions">
+          <a class="ccp-btn ccp-btn--primary" href="#" onclick="return false">Open clean page ↗</a>
+          <a class="ccp-btn" href="#" onclick="return false">Live link</a>
+        </div>
+      </article>
+      <article class="ccp-card" data-ccp-name="gradient pricing">
+        <div class="ccp-preview"><iframe srcdoc="&lt;style&gt;
+body{margin:0;font-family:system-ui;background:#1e1b4b;color:#fff;display:grid;place-items:center;height:100vh}
+.box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px);
+padding:28px;border-radius:20px;text-align:center;width:260px}
+.price{font-size:46px;font-weight:800;margin:6px 0}
+ul{list-style:none;padding:0;margin:0 0 20px;color:#c7d2fe;font-size:13px;line-height:2}
+button{width:100%;padding:12px;border:0;border-radius:12px;background:linear-gradient(90deg,#8b5cf6,#ec4899);color:#fff;font-weight:700}
+&lt;/style&gt;
+&lt;div class=&quot;box&quot;&gt;&lt;div&gt;STARTER&lt;/div&gt;&lt;div class=&quot;price&quot;&gt;₹499&lt;/div&gt;
+&lt;ul&gt;&lt;li&gt;5 projects&lt;/li&gt;&lt;li&gt;Clean pages&lt;/li&gt;&lt;li&gt;Unlimited views&lt;/li&gt;&lt;/ul&gt;&lt;button&gt;Choose plan&lt;/button&gt;&lt;/div&gt;" title="Gradient Pricing" loading="lazy" sandbox="allow-scripts"></iframe></div>
+        <div class="ccp-body">
+          <h3 class="ccp-card__title"><a href="#" onclick="return false">Gradient Pricing</a></h3>
+          <p class="ccp-meta"><span>Oct 13, 2026</span><span class="ccp-dot"></span><a href="#" onclick="return false">dktechnozone.com ↗</a><span class="ccp-dot"></span><span>745 chars</span></p>
+          <pre class="ccp-code">&lt;style&gt;
+body{margin:0;font-family:system-ui;background:#1e1b4b;color:#fff;display:grid;place-items:center;height:100vh}
+.box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px);
+padding:28px;border-radius:20px;text-align:center;width:260px}
+.price{font-size:46px;font-weight:800;margin:6px 0}
+ul{list-style:none;padding:0;margin:0 0 20px;color:#c7d2fe;fo
+…</pre>
+        </div>
+        <div class="ccp-actions">
+          <a class="ccp-btn ccp-btn--primary" href="#" onclick="return false">Open clean page ↗</a>
+          <a class="ccp-btn" href="#" onclick="return false">Live link</a>
+        </div>
+      </article>
+      <article class="ccp-card" data-ccp-name="animated loader">
+        <div class="ccp-preview"><iframe srcdoc="&lt;style&gt;
+body{margin:0;background:#020617;display:grid;place-items:center;height:100vh}
+.ring{width:90px;height:90px;border-radius:50%;background:conic-gradient(#38bdf8,#818cf8,#f472b6,#38bdf8);
+animation:spin 1.2s linear infinite;display:grid;place-items:center}
+.ring::after{content:&#x27;&#x27;;width:64px;height:64px;background:#020617;border-radius:50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+&lt;/style&gt;&lt;div class=&quot;ring&quot;&gt;&lt;/div&gt;" title="Animated Loader" loading="lazy" sandbox="allow-scripts"></iframe></div>
+        <div class="ccp-body">
+          <h3 class="ccp-card__title"><a href="#" onclick="return false">Animated Loader</a></h3>
+          <p class="ccp-meta"><span>Oct 14, 2026</span><span class="ccp-dot"></span><a href="#" onclick="return false">dktechnozone.com ↗</a><span class="ccp-dot"></span><span>426 chars</span></p>
+          <pre class="ccp-code">&lt;style&gt;
+body{margin:0;background:#020617;display:grid;place-items:center;height:100vh}
+.ring{width:90px;height:90px;border-radius:50%;background:conic-gradient(#38bdf8,#818cf8,#f472b6,#38bdf8);
+animation:spin 1.2s linear infinite;display:grid;place-items:center}
+.ring::after{content:&#x27;&#x27;;width:64px;height:64px;background:#020617;border-radius:50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+&lt;/styl
+…</pre>
+        </div>
+        <div class="ccp-actions">
+          <a class="ccp-btn ccp-btn--primary" href="#" onclick="return false">Open clean page ↗</a>
+          <a class="ccp-btn" href="#" onclick="return false">Live link</a>
+        </div>
+      </article>
+      <article class="ccp-card" data-ccp-name="login form">
+        <div class="ccp-preview"><iframe srcdoc="&lt;style&gt;
+body{margin:0;font-family:system-ui;background:linear-gradient(160deg,#eef2ff,#ecfeff);display:grid;place-items:center;height:100vh}
+.f{background:#fff;padding:30px;border-radius:18px;width:280px;box-shadow:0 20px 40px -20px rgba(79,70,229,.5)}
+h2{margin:0 0 18px;font-size:20px}
+input{width:100%;padding:12px;margin-bottom:12px;border:1px solid #e5e7eb;border-radius:10px;font:inherit;box-sizing:border-box}
+input:focus{outline:2px solid #4f46e5;border-color:transparent}
+button{width:100%;padding:12px;border:0;border-radius:10px;background:#4f46e5;color:#fff;font-weight:700}
+&lt;/style&gt;
+&lt;form class=&quot;f&quot; onsubmit=&quot;return false&quot;&gt;&lt;h2&gt;Welcome back&lt;/h2&gt;
+&lt;input placeholder=&quot;Email&quot;&gt;&lt;input type=&quot;password&quot; placeholder=&quot;Password&quot;&gt;&lt;button&gt;Sign in&lt;/button&gt;&lt;/form&gt;" title="Login Form" loading="lazy" sandbox="allow-scripts"></iframe></div>
+        <div class="ccp-body">
+          <h3 class="ccp-card__title"><a href="#" onclick="return false">Login Form</a></h3>
+          <p class="ccp-meta"><span>Oct 15, 2026</span><span class="ccp-dot"></span><a href="#" onclick="return false">dktechnozone.com ↗</a><span class="ccp-dot"></span><span>762 chars</span></p>
+          <pre class="ccp-code">&lt;style&gt;
+body{margin:0;font-family:system-ui;background:linear-gradient(160deg,#eef2ff,#ecfeff);display:grid;place-items:center;height:100vh}
+.f{background:#fff;padding:30px;border-radius:18px;width:280px;box-shadow:0 20px 40px -20px rgba(79,70,229,.5)}
+h2{margin:0 0 18px;font-size:20px}
+input{width:100%;padding:12px;margin-bottom:12px;border:1px solid #e5e7eb;border-radius:10px;font:inherit;box-si
+…</pre>
+        </div>
+        <div class="ccp-actions">
+          <a class="ccp-btn ccp-btn--primary" href="#" onclick="return false">Open clean page ↗</a>
+          <a class="ccp-btn" href="#" onclick="return false">Live link</a>
+        </div>
+      </article>
+      <article class="ccp-card" data-ccp-name="stats widget">
+        <div class="ccp-preview"><iframe srcdoc="&lt;style&gt;
+body{margin:0;font-family:system-ui;background:#0f172a;color:#e2e8f0;display:grid;place-items:center;height:100vh}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:#111c33;padding:22px;border-radius:18px;width:280px}
+.n{font-size:26px;font-weight:800;color:#38bdf8}.l{font-size:11px;color:#94a3b8;letter-spacing:.08em}
+&lt;/style&gt;
+&lt;div class=&quot;g&quot;&gt;
+&lt;div&gt;&lt;div class=&quot;n&quot;&gt;12.4k&lt;/div&gt;&lt;div class=&quot;l&quot;&gt;VISITORS&lt;/div&gt;&lt;/div&gt;
+&lt;div&gt;&lt;div class=&quot;n&quot;&gt;98%&lt;/div&gt;&lt;div class=&quot;l&quot;&gt;UPTIME&lt;/div&gt;&lt;/div&gt;
+&lt;div&gt;&lt;div class=&quot;n&quot;&gt;₹1.2L&lt;/div&gt;&lt;div class=&quot;l&quot;&gt;REVENUE&lt;/div&gt;&lt;/div&gt;
+&lt;div&gt;&lt;div class=&quot;n&quot;&gt;4.9&lt;/div&gt;&lt;div class=&quot;l&quot;&gt;RATING&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;" title="Stats Widget" loading="lazy" sandbox="allow-scripts"></iframe></div>
+        <div class="ccp-body">
+          <h3 class="ccp-card__title"><a href="#" onclick="return false">Stats Widget</a></h3>
+          <p class="ccp-meta"><span>Oct 16, 2026</span><span class="ccp-dot"></span><a href="#" onclick="return false">dktechnozone.com ↗</a><span class="ccp-dot"></span><span>633 chars</span></p>
+          <pre class="ccp-code">&lt;style&gt;
+body{margin:0;font-family:system-ui;background:#0f172a;color:#e2e8f0;display:grid;place-items:center;height:100vh}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:#111c33;padding:22px;border-radius:18px;width:280px}
+.n{font-size:26px;font-weight:800;color:#38bdf8}.l{font-size:11px;color:#94a3b8;letter-spacing:.08em}
+&lt;/style&gt;
+&lt;div class=&quot;g&quot;&gt;
+&lt;div&gt;&lt;div class=&quot;n&quot;&gt;12.4k&lt;/div&gt;
+…</pre>
+        </div>
+        <div class="ccp-actions">
+          <a class="ccp-btn ccp-btn--primary" href="#" onclick="return false">Open clean page ↗</a>
+          <a class="ccp-btn" href="#" onclick="return false">Live link</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</div>
+<script>(function(){var i=document.querySelectorAll(".ccp-filter");for(var n=0;n<i.length;n++){i[n].addEventListener("input",function(){var w=this.closest(".ccp-wrap"),q=this.value.toLowerCase().trim(),c=w.querySelectorAll(".ccp-card");for(var j=0;j<c.length;j++){var name=c[j].getAttribute("data-ccp-name")||"";c[j].style.display=name.indexOf(q)>-1?"":"none";}});})();</script>
+</body>
+</html>
